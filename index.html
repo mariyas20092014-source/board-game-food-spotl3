@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Can I have some...?</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700;900&display=swap" rel="stylesheet"/>
+
+<style>
+  :root{
+    --task-font-size: 25px;
+    --start-font-size: 22px;
+    --start-btn-color: #8a68bd;
+
+    --tile-size: 96px;
+    --hero-size: 120px;
+    --tiles-inset: 72px;
+  }
+
+  html,body{
+    margin:0;
+    height:100%;
+    background:#000;
+    font-family: 'Roboto Condensed', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+
+  .game-wrap{
+    position:relative;
+    min-height:100vh;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    background: url("images/bg.png") center/cover no-repeat fixed;
+  }
+
+  header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    padding:12px 16px 4px;
+    color:white;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  }
+  header h1{
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:.5px;
+    margin:0;
+  }
+
+  .board{
+    position:relative;
+    width: min(1200px, 96vw);
+    height: min(740px, 76vh);
+    margin: 4px auto 10px;
+    border-radius: 18px;
+    overflow:visible;
+  }
+
+  .tiles{
+    position:absolute;
+    inset: var(--tiles-inset);
+  }
+
+  .tile{
+    position:absolute;
+    width: var(--tile-size);
+    height: var(--tile-size);
+    transform: translate(-50%, -50%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .tile-inner{
+    position:relative;
+    width:100%;
+    height:100%;
+    border-radius:14px;
+    overflow:visible;
+  }
+
+  .tile-inner img.board-img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    pointer-events:none;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));
+    transition: filter .18s ease;
+  }
+
+  .tile .badge{
+    position:absolute;
+    left:50%;
+    top:-6px;
+    transform:translateX(-50%);
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, #fff9c4, #ffdf6a);
+    color:#3b2d00;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:15px;
+    font-weight:900;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.55),
+                0 0 10px rgba(255,215,0,0.7),
+                inset 0 0 8px rgba(255,255,255,0.7);
+    z-index:2000;
+    user-select:none;
+    pointer-events:none;
+  }
+
+  .tile.active{ cursor:pointer; }
+  .tile.inactive{ cursor:default; }
+
+  .tile.target .tile-inner{
+    animation: targetPulse 0.9s ease-in-out infinite;
+  }
+  .tile.target img.board-img{
+    filter:
+      drop-shadow(0 0 6px rgba(0,0,0,.7))
+      drop-shadow(0 0 12px rgba(255,215,0,0.95))
+      drop-shadow(0 0 26px rgba(255,215,0,0.8))
+      drop-shadow(0 0 38px rgba(255,215,0,0.9));
+  }
+  @keyframes targetPulse{
+    0%,100%{ transform: scale(1); }
+    50%{ transform: scale(1.06); }
+  }
+
+  .hero{
+    position:absolute;
+    width: var(--hero-size);
+    height: var(--hero-size);
+    transform: translate(-50%, -100%);
+    pointer-events:none;
+    z-index: 2500;
+    transition: left .3s ease, top .3s ease, transform .3s ease, opacity .3s ease;
+  }
+  .hero img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    filter: drop-shadow(0 12px 18px rgba(0,0,0,.55));
+    animation: heroBob 3.2s ease-in-out infinite;
+  }
+  @keyframes heroBob{
+    0%{ transform: translateY(0); }
+    50%{ transform: translateY(-4px); }
+    100%{ transform: translateY(0); }
+  }
+
+  .endcap{
+    position:absolute;
+    transform: translate(-50%, -50%);
+    padding:8px 14px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:14px;
+    letter-spacing:.6px;
+    white-space:nowrap;
+    color:#1b1300;
+    background: radial-gradient(circle at 30% 30%, #fff1a8, #ffcc3f);
+    box-shadow: 0 0 0 2px rgba(0,0,0,.55),
+                0 0 16px rgba(255,215,0,.6),
+                inset 0 0 14px rgba(255,215,0,.9);
+    pointer-events:auto;
+    z-index:1500;
+  }
+
+  .hud{
+    position:relative;
+    display:flex;
+    gap:18px;
+    align-items:center;
+    justify-content:center;
+    margin:8px 0 6px;
+    flex-wrap:wrap;
+  }
+  .roll-label{
+    color:#fff;
+    text-shadow: 0 2px 8px rgba(0,0,0,.6);
+    font-weight:700;
+    letter-spacing:.4px;
+  }
+  .roll-result{
+    min-width:130px;
+    color:#fff;
+    font-weight:800;
+    text-align:center;
+    padding:8px 12px;
+    border-radius:12px;
+    background: rgba(0,0,0,.55);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+
+  .dice2d{
+    width:96px;
+    height:96px;
+    border-radius:16px;
+    background: radial-gradient(140% 140% at 30% 30%, #ffffff, #efefef 60%, #e4e4e4 100%);
+    box-shadow:
+      inset 0 0 0 2px rgba(89,130,7,.9),
+      inset 0 0 18px rgba(89,130,7,.5),
+      0 8px 22px rgba(0,0,0,.45),
+      0 0 18px rgba(89,130,7,.35);
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+    position:relative;
+    transition: transform .18s.ease;
+  }
+  .dice2d.wiggle{
+    animation: diceWiggle .45s ease-in-out infinite;
+  }
+  @keyframes diceWiggle{
+    0%,100%{ transform: rotate(0deg) translateY(0); }
+    25%{ transform: rotate(-8deg) translateY(-2px); }
+    50%{ transform: rotate(8deg) translateY(1px); }
+    75%{ transform: rotate(-4deg) translateY(-1px); }
+  }
+
+  .dice2d .pip-grid{
+    width:76%;
+    height:76%;
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap:10px;
+  }
+  .dice2d .pip{
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    background: radial-gradient(120% 120% at 30% 30%, #b0d137, #598207);
+    box-shadow:
+      0 0 10px rgba(176,209,55,.9),
+      0 0 20px rgba(176,209,55,.7),
+      inset 0 1px 1px rgba(255,255,255,.9);
+  }
+
+  .overlay{
+    position:fixed;
+    inset:0;
+    background: rgba(0,0,0,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:2600;
+  }
+  .overlay.show{ display:flex; }
+
+  .task-modal{
+    position:relative;
+    width: min(480px, 92vw);
+    aspect-ratio: 4 / 3;
+    border-radius: 18px;
+    background: transparent;
+    padding:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    box-shadow:none;
+  }
+
+  .task-frame{
+    position:relative;
+    width:100%;
+    height:100%;
+    border-radius: 16px;
+    background: #0b0b0b;
+    display:grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    gap:8px;
+    padding:12px;
+    overflow:hidden;
+    box-shadow:
+      0 0 0 2px rgba(255,215,0,.95),
+      0 0 18px rgba(255,215,0,.9),
+      0 0 44px rgba(255,215,0,.6),
+      inset 0 0 24px rgba(255,215,0,.5);
+  }
+  .frame-img{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    background:url("images/box.png") center/cover no-repeat;
+    opacity:1;
+    pointer-events:none;
+  }
+
+  .task-content, .answers, .modal-actions{ position:relative; z-index:1; }
+
+  .task-content{
+    grid-column:1/2;
+    grid-row:1/2;
+    color:#ffffff;
+    font-size:var(--task-font-size);
+    line-height:1.35;
+    padding:8px;
+    margin-top:8px;
+    background:rgba(0,0,0,.45);
+    border-radius:10px;
+  }
+
+  .answers{
+    grid-column:1/2;
+    grid-row:2/2;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .answer{
+    padding:12px 14px;
+    border-radius:12px;
+    background:rgba(0,0,0,.55);
+    color:#ffffff;
+    font-weight:800;
+    font-size:22px;
+    cursor:pointer;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);
+    transition: transform .12s.ease, box-shadow .12s ease, background .12s ease, opacity .12s.ease;
+    opacity:0.9;
+  }
+  .answer:hover{
+    opacity:1;
+    background:rgba(0,0,0,.75);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.32),
+      0 0 16px rgba(255,215,0,.35);
+    animation: answerWiggle .35s ease both;
+  }
+  @keyframes answerWiggle{
+    0%{ transform: translateX(0) rotate(0deg);}
+    25%{ transform: translateX(-2px) rotate(-1.5deg);}
+    50%{ transform: translateX(2px) rotate(1.2deg);}
+    75%{ transform: translateX(-1px) rotate(-.8deg);}
+    100%{ transform: translateX(0) rotate(0deg);}
+  }
+
+  .modal-actions{
+    position:absolute;
+    right:10px;
+    bottom:10px;
+    display:flex;
+    gap:8px;
+  }
+
+  .btn{
+    padding:9px 12px;
+    border-radius:12px;
+    border:none;
+    color:#1b1b00;
+    font-weight:900;
+    cursor:pointer;
+    background:radial-gradient(circle at 30% 30%,#b0d137,#598207);
+  }
+  .btn:disabled{
+    filter:grayscale(1) brightness(.85);
+    cursor:not-allowed;
+  }
+
+  .fullscreen-overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+  }
+  .fullscreen-overlay.show{ display:flex; }
+
+  .dark-note{
+    background:rgba(0,0,0,.85);
+    z-index:2700;
+  }
+  .win-overlay{
+    background:rgba(0,0,0,.9);
+    z-index:2800;
+  }
+
+  .modal-box{
+    position:relative;
+    width:min(480px,92vw);
+    padding:22px 22px 26px;
+    border-radius:18px;
+    background:#0b0b0b;
+    color:white;
+    text-align:center;
+    box-shadow:
+      0 0 0 2px rgba(255,215,0,.95),
+      0 0 24px rgba(255,215,0,.9),
+      0 0 54px rgba(255,215,0,.7),
+      inset 0 0 18px rgba(255,215,0,.5);
+  }
+
+  .win-title{
+    margin:0 0 10px;
+    font-size:26px;
+    color:#ffd700;
+  }
+  .win-score{
+    margin-top:8px;
+    font-size:20px;
+    color:#ffd700;
+  }
+
+  .start-screen{
+    position:fixed;
+    inset:0;
+    background:url("images/bg.png") center/cover no-repeat fixed;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:3000;
+    pointer-events:auto;
+  }
+  .start-card{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    background:rgba(0,0,0,.65);
+    padding:22px 26px;
+    border-radius:18px;
+  }
+  .start-title{
+    color:#fff;
+    font-weight:900;
+    letter-spacing:.6px;
+    font-size:22px;
+    text-align:center;
+  }
+  .start-btn{
+    font-weight:900;
+    letter-spacing:.6px;
+    font-size:var(--start-font-size);
+    color:#ffffff;
+    padding:12px 26px;
+    border-radius:999px;
+    cursor:pointer;
+    border:none;
+    background:radial-gradient(circle at 30% 30%,var(--start-btn-color),#8a68bd);
+    box-shadow:
+      0 0 10px rgba(89,130,7,.7),
+      inset 0 0 12px rgba(255,255,255,.35);
+    animation: startPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes startPulse{
+    0%,100%{
+      transform: scale(1);
+      box-shadow:
+        0 0 10px rgba(89,130,7,.55),
+        inset 0 0 10px rgba(255,255,255,.3);
+    }
+    50%{
+      transform: scale(1.03);
+      box-shadow:
+        0 0 14px rgba(140,186,34,.75),
+        inset 0 0 14px rgba(255,255,255,.4);
+    }
+  }
+
+  .teleport-burst{
+    position:absolute;
+    width:120px;
+    height:120px;
+    margin-left:-60px;
+    margin-top:-60px;
+    border-radius:50%;
+    pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,1), rgba(255,215,0,0.8) 40%, rgba(255,215,0,0) 70%);
+    box-shadow:
+      0 0 20px rgba(255,255,255,0.9),
+      0 0 40px rgba(255,215,0,0.9),
+      0 0 70px rgba(255,215,0,0.7);
+    opacity:0;
+    transform:scale(0.3);
+    z-index:1999;
+    animation: burst 0.5s ease-out forwards;
+  }
+
+  .score-popup{
+    position:fixed;
+    color:#ffd700;
+    font-weight:900;
+    font-size:24px;
+    text-shadow:0 0 10px rgba(255,215,0,.9),0 0 18px rgba(255,215,0,.8);
+    opacity:0;
+    transform:translate(-50%, -50%) translateY(10px);
+    pointer-events:none;
+    z-index:3001;
+    animation: scorePop 1s ease-out forwards;
+  }
+  @keyframes scorePop{
+    0%{ opacity:0; transform:translate(-50%,-50%) translateY(10px) scale(0.9);}
+    20%{ opacity:1; transform:translate(-50%,-50%) translateY(0) scale(1);}
+    80%{ opacity:1; transform:translate(-50%,-50%) translateY(-12px) scale(1);}
+    100%{ opacity:0; transform:translate(-50%,-50%) translateY(-20px) scale(1.05);}
+  }
+</style>
+</head>
+<body>
+<div class="game-wrap">
+  <header><h1>Can I have some...?</h1></header>
+
+  <div class="board">
+    <div class="tiles" id="tiles"></div>
+
+    <div class="endcap" id="startCap">START</div>
+    <div class="endcap" id="finishCap">FINISH</div>
+
+    <div class="hero" id="hero">
+      <img src="images/5.png" alt="герой">
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="roll-label">Брось кубик, чтобы идти вперёд</div>
+    <div class="dice2d" id="dice2d">
+      <div class="pip-grid" id="pipGrid"></div>
+    </div>
+    <div class="roll-result" id="rollResult">Готово к броску</div>
+  </div>
+
+  <div class="overlay" id="taskOverlay">
+    <div class="task-modal">
+      <div class="task-frame">
+        <div class="frame-img"></div>
+        <div class="task-content" id="taskText"></div>
+        <div class="answers" id="answers"></div>
+        <div class="modal-actions">
+          <button class="btn" id="closeTaskBtn" disabled>Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fullscreen-overlay dark-note" id="darkNote">
+    <div class="note-box modal-box">
+      <div style="font-size:28px;margin-bottom:8px;color:#ffd700;">Go back 2 spaces</div>
+      <div style="opacity:.9;margin-bottom:14px;">Шагни назад на 2 клетки!</div>
+      <button class="btn" id="darkNoteOk">OK</button>
+    </div>
+  </div>
+
+  <div class="fullscreen-overlay win-overlay" id="winOverlay">
+    <div class="win-box modal-box">
+      <h2 class="win-title">Great job!</h2>
+      <div style="margin-bottom:8px;">Хочешь открыть все остальные ячейки и посмотреть задания?</div>
+      <div class="win-score" id="winScore"></div>
+      <button class="btn" id="openAllBtn" style="margin-top:14px;">Открыть все остальные ячейки?</button>
+    </div>
+  </div>
+
+  <div class="start-screen" id="startScreen">
+    <div class="start-card">
+      <div class="start-title">Добро пожаловать! Нажми, чтобы начать</div>
+      <button class="start-btn" id="startBtn">START</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const NUM_TILES = 20;
+
+const CELL_TYPES = {
+  1:'Q',2:'Q',3:'Q',4:'Q',5:'Q',
+  6:'Q',7:'Q',8:'T',9:'Q',10:'Q',
+ 11:'B',12:'Q',13:'Q',14:'T',15:'Q',
+16:'Q',17:'B',18:'Q',19:'T',20:'Q'
+};
+
+const TILE_IMAGES = {
+  snow1:"images/1.png",
+  gift2:"images/2.png",
+  gift3:"images/3.png",
+  snow2:"images/4.png",
+};
+const BASE_TILE_PLAN = [
+  "snow1","snow2","snow1","gift2","snow1",
+  "gift3","snow2","snow1","gift2","snow1",
+  "gift3","snow2","snow1","gift2","gift3",
+  "snow1","snow2","gift2","snow1","gift3"
+];
+
+const TASKS = {
+  1: { text: "Tomatoes" },
+  2: { text: "Potatoes" },
+  3: { text: "Carrots" },
+  4: { text: "Bread" },
+  5: { text: "Honey" },
+  6: { text: "Biscuits" },
+  7: { text: "Sausages" },
+  9: { text: "Meat" },
+ 10: { text: "Pasta" },
+ 12: { text: "Vegetables" },
+ 13: { text: "Water" },
+ 15: { text: "Rice" },
+ 16: { text: "Chicken" },
+ 18: { text: "Eggs" },
+ 20: { text: "Ice cream" }
+};
+
+const tilesEl   = document.getElementById('tiles');
+const heroEl    = document.getElementById('hero');
+const startCap  = document.getElementById('startCap');
+const finishCap = document.getElementById('finishCap');
+const dice2d    = document.getElementById('dice2d');
+const pipGrid   = document.getElementById('pipGrid');
+const rollResultEl = document.getElementById('rollResult');
+
+const taskOverlay  = document.getElementById('taskOverlay');
+const taskTextEl   = document.getElementById('taskText');
+const answersEl    = document.getElementById('answers');
+const closeTaskBtn = document.getElementById('closeTaskBtn');
+
+const darkNote   = document.getElementById('darkNote');
+const darkNoteOk = document.getElementById('darkNoteOk');
+
+const winOverlay   = document.getElementById('winOverlay');
+const openAllBtn   = document.getElementById('openAllBtn');
+const winScoreEl   = document.getElementById('winScore');
+
+const startScreen  = document.getElementById('startScreen');
+const startBtn     = document.getElementById('startBtn');
+
+let positions=[];
+let currentIndex=-1;
+let isAnimating=false;
+let diceRolling=false;
+let overlayOpen=false;
+let lastCellAnsweredCorrect = null;
+let freeExplore = false;
+let score = 0;
+let lastPopupSide = 'right';
+let firstRoll = true; 
+
+function layoutPositionsArcSine(){
+  positions = [];
+
+  const rect = tilesEl.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height;
+
+  const tileSize = parseFloat(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--tile-size')
+  ) || 96;
+
+  const marginX = tileSize * 0.5;
+  const usableWidth = W - marginX * 2;
+  const stepX = usableWidth / (NUM_TILES - 1);
+
+  const centerY = H * 0.5;
+  const amp     = H * 0.28;
+  const waves   = 2;
+
+  const tiles = tilesEl.querySelectorAll('.tile');
+
+  for(let i=0;i<NUM_TILES;i++){
+    let x = marginX + stepX * i;
+    const t = i / (NUM_TILES - 1);
+    let y = centerY + Math.sin(t * Math.PI * 2 * waves) * amp;
+
+    if(i >= 10){
+      y += tileSize * 0.16;
+    }
+    if(i === 10){
+      y -= tileSize * 0.08;
+    }
+    if(i === 0){
+      x -= tileSize * 0.06;
+    }
+    if(i === 1 || i === 2){
+      x -= tileSize * 0.05;
+    }
+    if(i === 11 || i === 12){
+      x -= tileSize * 0.05;
+    }
+
+    const p = {x,y};
+    positions.push(p);
+    if(tiles[i]){
+      tiles[i].style.left = x + 'px';
+      tiles[i].style.top  = y + 'px';
+    }
+  }
+}
+
+function positionStartFinishHero(){
+  if(!positions.length) return;
+
+  const first = positions[0];
+  const last  = positions[NUM_TILES-1];
+
+  const tileSize = parseFloat(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--tile-size')
+  ) || 96;
+
+  const tileTop = first.y - tileSize/2;
+  const badgeTop = tileTop - 6;
+  const badgeBottom = badgeTop + 32;
+
+  const capRect = startCap.getBoundingClientRect();
+  const startCapHeight = capRect.height || 28;
+  const startCapBottom = badgeBottom;
+
+  let startCapCenterY = startCapBottom - startCapHeight/2;
+  startCapCenterY += 32;
+
+  const startX = first.x + 10;
+  const startY = startCapCenterY;
+
+  startCap.style.left = startX + 'px';
+  startCap.style.top  = startY + 'px';
+
+  heroEl.style.left   = startX + 'px';
+  heroEl.style.top    = startY + 'px';
+
+  const finishX = last.x;
+  const finishY = last.y + tileSize * 1.1;
+  finishCap.style.left = finishX + 'px';
+  finishCap.style.top  = finishY + 'px';
+}
+
+function renderTiles(){
+  tilesEl.innerHTML='';
+  for(let i=0;i<NUM_TILES;i++){
+    const tile=document.createElement('div');
+    tile.className='tile inactive';
+    tile.dataset.index=String(i);
+
+    const inner=document.createElement('div');
+    inner.className='tile-inner';
+
+    const img=document.createElement('img');
+    img.className='board-img';
+    img.src=TILE_IMAGES[BASE_TILE_PLAN[i]];
+    img.alt='Tile '+(i+1);
+
+    const badge=document.createElement('div');
+    badge.className='badge';
+    badge.textContent=i+1;
+
+    inner.appendChild(img);
+    tile.appendChild(inner);
+    tile.appendChild(badge);
+    tilesEl.appendChild(tile);
+
+    tile.addEventListener('click',()=>{
+      const idx = Number(tile.dataset.index);
+      if(isAnimating || overlayOpen) return;
+
+      if(freeExplore){
+        const cellNum = idx+1;
+        if(CELL_TYPES[cellNum] === 'Q' && TASKS[cellNum]){
+          openTask(cellNum);
+        }
+        return;
+      }
+
+      if(idx !== currentIndex) return;
+      handleCell(idx+1);
+    });
+  }
+}
+
+function updateHighlights(){
+  const tiles=tilesEl.querySelectorAll('.tile');
+  tiles.forEach((el,i)=>{
+    if(freeExplore){
+      el.classList.remove('target','inactive');
+      el.classList.add('active');
+    }else{
+      if(i===currentIndex && currentIndex>=0){
+        el.classList.add('target','active');
+        el.classList.remove('inactive');
+      }else{
+        el.classList.remove('target','active');
+        el.classList.add('inactive');
+      }
+    }
+  });
+}
+
+function handleCell(cellNum){
+  const type = CELL_TYPES[cellNum];
+  if(type === 'Q' && TASKS[cellNum]){
+    openTask(cellNum);
+  }else if(type === 'T'){
+    triggerTeleport(2);
+  }else if(type === 'B'){
+    showGoBackOverlay(()=>goBack(2));
+  }
+}
+
+function syncHeroToCurrent(){
+  const t = positions[currentIndex];
+  if(!t) return;
+  heroEl.style.left = t.x + 'px';
+  heroEl.style.top  = t.y + 'px';
+}
+
+function moveSteps(n){
+  if(n<=0){ updateHighlights(); return; }
+  isAnimating=true;
+  const limit=NUM_TILES-1;
+
+  currentIndex=Math.min(currentIndex+1,limit);
+  syncHeroToCurrent();
+
+  setTimeout(()=>{
+    if(currentIndex>=limit || n===1){
+      isAnimating=false;
+      updateHighlights();
+    }else{
+      moveSteps(n-1);
+    }
+  },320);
+}
+
+function createScorePopup(x, y){
+  const popup=document.createElement('div');
+  popup.className='score-popup';
+  popup.textContent='+10';
+  popup.style.left = x + 'px';
+  popup.style.top  = y + 'px';
+  document.body.appendChild(popup);
+  setTimeout(()=>popup.remove(),1000);
+}
+
+function spawnScorePopup(){
+  const modal = document.querySelector('.task-modal');
+  if(!modal){
+    createScorePopup(window.innerWidth/2, window.innerHeight*0.15);
+    return;
+  }
+
+  const rect = modal.getBoundingClientRect();
+
+  lastPopupSide = (lastPopupSide === 'left') ? 'right' : 'left';
+  const side = lastPopupSide;
+
+  const offsetX = 80;
+  const minY = rect.top - 40;
+  const maxY = rect.bottom + 40;
+  const y = minY + Math.random()*(maxY - minY);
+
+  const x = (side === 'left') ? (rect.left - offsetX) : (rect.right + offsetX);
+
+  createScorePopup(x,y);
+}
+
+function openTask(cellNum){
+  const task = TASKS[cellNum];
+  if(!task) return;
+  
+  overlayOpen=true;
+  answersEl.innerHTML='';
+
+  // Display the word large and centered
+  taskTextEl.innerHTML = `<div style="font-size: 50px; text-align: center; margin-top: 15%; font-weight: 900; color: #ffd700; text-shadow: 0 4px 12px rgba(0,0,0,0.8);">${task.text}</div>`;
+  
+  // Enable the close button instantly
+  closeTaskBtn.disabled = false; 
+
+  // Award points just for reading the flashcard
+  if(!freeExplore){
+    score += 10;
+    spawnScorePopup();
+  }
+
+  taskOverlay.classList.add('show');
+
+  function onClose(){
+    taskOverlay.classList.remove('show');
+    closeTaskBtn.removeEventListener('click', onClose);
+    overlayOpen = false;
+    
+    // Clear the text for the next time
+    taskTextEl.innerHTML = ''; 
+
+    // Trigger the win screen if they landed on the final tile (20)
+    if(!freeExplore && cellNum === NUM_TILES){
+      winScoreEl.textContent = 'Набранные очки: ' + score;
+      winOverlay.classList.add('show');
+    }
+  }
+  
+  closeTaskBtn.addEventListener('click', onClose);
+}
+
+function spawnBurst(x,y){
+  const burst=document.createElement('div');
+  burst.className='teleport-burst';
+  burst.style.left = x+'px';
+  burst.style.top  = y+'px';
+  tilesEl.appendChild(burst);
+  setTimeout(()=>burst.remove(),500);
+}
+
+function triggerTeleport(steps){
+  const limit=NUM_TILES-1;
+  const fromIndex = currentIndex;
+  const toIndex = Math.min(currentIndex+steps,limit);
+
+  const fromPos = positions[fromIndex] || positions[0];
+  const toPos   = positions[toIndex]   || positions[limit];
+
+  isAnimating=true;
+
+  heroEl.style.transition = 'transform 0.5s ease, opacity 0.5s ease';
+  heroEl.style.transform  = 'translate(-50%, -100%) scale(0.2)';
+  heroEl.style.opacity    = '0';
+  spawnBurst(fromPos.x, fromPos.y);
+
+  setTimeout(()=>{
+    currentIndex = toIndex;
+    heroEl.style.left = toPos.x+'px';
+    heroEl.style.top  = toPos.y+'px';
+
+    spawnBurst(toPos.x, toPos.y);
+
+    setTimeout(()=>{
+      heroEl.style.transform = 'translate(-50%, -100%) scale(1)';
+      heroEl.style.opacity   = '1';
+      setTimeout(()=>{
+        heroEl.style.transition = 'left .3s ease, top .3s ease, transform .3s.ease, opacity .3s ease';
+        isAnimating=false;
+        updateHighlights();
+      },500);
+    },10);
+  },500);
+}
+
+function goBack(steps){
+  currentIndex = Math.max(currentIndex-steps,0);
+  syncHeroToCurrent();
+  updateHighlights();
+}
+function showGoBackOverlay(cb){
+  darkNote.classList.add('show');
+  function h(){
+    darkNote.classList.remove('show');
+    darkNoteOk.removeEventListener('click',h);
+    cb && cb();
+  }
+  darkNoteOk.addEventListener('click',h);
+}
+
+const pipLayouts={
+  1:[[2,2]],
+  2:[[1,1],[3,3]],
+  3:[[1,1],[2,2],[3,3]],
+  4:[[1,1],[1,3],[3,1],[3,3]],
+  5:[[1,1],[1,3],[2,2],[3,1],[3,3]],
+  6:[[1,1],[1,3],[2,1],[2,3],[3,1],[3,3]],
+};
+function clearPips(){ pipGrid.innerHTML=''; }
+function addPip(r,c){
+  const d=document.createElement('div');
+  d.className='pip';
+  d.style.gridRow=r;
+  d.style.gridColumn=c;
+  pipGrid.appendChild(d);
+}
+function renderPips(n){
+  clearPips();
+  (pipLayouts[n]||[[2,2]]).forEach(([r,c])=>addPip(r,c));
+}
+renderPips(1);
+
+function rollDiceVisual(finalValue, cb){
+  const steps = 10;
+  const interval = 70;
+  let count = 0;
+  const timer = setInterval(()=>{
+    count++;
+    if(count >= steps){
+      clearInterval(timer);
+      renderPips(finalValue);
+      cb && cb();
+      return;
+    }
+    const randFace = 1 + Math.floor(Math.random()*6);
+    renderPips(randFace);
+  }, interval);
+}
+
+dice2d.addEventListener('click',()=>{
+  if(isAnimating || diceRolling || overlayOpen || freeExplore) return;
+  diceRolling=true;
+
+  dice2d.classList.add('wiggle');
+  rollResultEl.textContent='Бросаем...';
+
+  const n = 1 + Math.floor(Math.random()*6);
+  rollDiceVisual(n,()=>{
+    dice2d.classList.remove('wiggle'); 
+    rollResultEl.textContent='Выпало: '+n;
+    moveSteps(n);
+    diceRolling=false;
+    firstRoll = false;
+  });
+});
+
+startBtn.addEventListener('click',()=>{
+  startScreen.style.display='none';
+});
+
+openAllBtn.addEventListener('click',()=>{
+  winOverlay.classList.remove('show');
+  freeExplore = true;
+  const tiles = tilesEl.querySelectorAll('.tile');
+  tiles.forEach(t=>{
+    t.classList.remove('inactive','target');
+    t.classList.add('active');
+  });
+  rollResultEl.textContent = 'Свободный режим: нажимай на любые клеточки с вопросами';
+});
+
+function initAll(){
+  freeExplore = false;
+  score = 0;
+  lastPopupSide = 'right';
+  firstRoll = true;
+  renderTiles();
+  layoutPositionsArcSine();
+  positionStartFinishHero();
+  currentIndex=-1;
+  updateHighlights();
+  renderPips(1);
+  rollResultEl.textContent='Готово к броску';
+
+  dice2d.classList.add('wiggle');
+  setTimeout(()=>{ if(firstRoll) dice2d.classList.remove('wiggle'); }, 1200);
+}
+
+window.addEventListener('resize',()=>{
+  layoutPositionsArcSine();
+  positionStartFinishHero();
+  if(currentIndex>=0){
+    syncHeroToCurrent();
+  }
+  updateHighlights();
+});
+
+initAll();
+</script>
+</body>
+</html>
